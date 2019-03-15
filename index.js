@@ -263,12 +263,29 @@ function getIps() {
 	return ips;
 }
 
+function getDistro() {
+	var result = '';
+	if (os.type() == 'Linux' && files.fileExists('/etc/os-release')) {
+		var contents = fs.readFileSync('/etc/os-release', 'utf8').split('\n').forEach(function(p){
+			if (p.indexOf('NAME=') == 0) 
+			{
+				result = p.substring(5).replace(/"/g, "");
+				var space = result.indexOf(' ');
+				if (space != -1)
+					result = result.substring(0, space);
+			}
+		});
+	}
+	
+	return result;
+}
+
 ////////////////////////////////////////////////////
 function pingServer(data, response) {
 	console.log('pingServer');
 	
 	var ips = getIps();
-	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
+	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release() + ' ' + getDistro(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
 	restCalls.putData(username, password, data, {"update":"true"}, runCommandAndSendResponse, null);
 }
 
@@ -382,7 +399,7 @@ conf = new Configstore('agent',
 		alertrange: 	'50-90', 
 		alertenabled: 	'0', 
 		alertregex: 	'([.0-9]+)[CF]',
-		profurl:		'file://usb-thermometer-master/out.txt',
+		profurl:		'file://usb-thermometer-master/out2.txt.lck',
 		profregex:		'.*',
 		testmode:		'',
 		lastserverget:	0
@@ -406,8 +423,10 @@ password = pair.b;
 
 optionalArgs();
 
-//TODO: remove
+//TODO: remove block
 conf.set('profile','temptest');
+conf.set('profurl','file://out2.txt.lck');
+//
 
 if (files.directoryExists('lib')) {
 	console.log('lib exists')
@@ -429,14 +448,24 @@ try
 	//TODO: apply profregex
 	var filename = url.substring(7);
 	var contents = '';
-	if (files.fileExists(filename))
-		contents = fs.readFileSync(filename, 'utf8');
+	var doRead = true;
+	if (filename.endsWith('.lck'))
+	{
+		filename = filename.slice(0, -4);
+		const { spawnSync } = require('child_process');
+		const py = spawnSync('python', ['lock.py', filename]);	
+		contents = py.stdout.toString('utf8');
+		if (py.stderr.toString('utf8').length < 1)
+			doRead = false;
+	}
 	
+	if (doRead && files.fileExists(filename))
+		contents = fs.readFileSync(filename, 'utf8');
+
 	parseContentsForAlert(contents);
 	sendOutput(contents);
 } 
 catch (err) 
 {
-	//console.log('out.txt does not exist')
 	console.log(err)
 }
