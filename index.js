@@ -34,6 +34,19 @@ function splitPair(pair, divider) {
 	return { a: pair.substring(0, index), b: pair.substring(index + 1) };
 }
 
+function isCharNumber(c){
+    return c >= '0' && c <= '9';
+}
+function validEntry(entry) {
+	var ret = true;
+	entry.split('').forEach(
+		function(p){
+			if (!isCharNumber(p) && p != '-') ret = false;
+		}
+	);
+	return ret;
+}
+
 ////////////////////////////////////////////////////
 
 function writeAgentsToJavascript(data, response) {
@@ -89,8 +102,18 @@ function writeSettingsToJavascript(data, response) {
 		if (keys.indexOf('passwordset') != -1) {
 			fs.writeFileSync('.server_login', vals[0]);
 		}
-		
-		//TODO:set alert and polling properties 
+		else if (keys.indexOf('intervalset') != -1) {
+			if (validEntry(vals[1]))
+				conf.set('pollinginterval', vals[1]);
+		}
+		else if (keys.indexOf('enabledset') != -1) {
+			if (validEntry(vals[2]))
+				conf.set('alertenabled', vals[2]);
+		}
+		else if (keys.indexOf('rangeset') != -1) {
+			if (validEntry(vals[3]))
+				conf.set('alertrange', vals[3]);
+		}
 	}	
 	
 	if (new Date().getTime() - conf.get('lastserverget') > 60000)
@@ -308,7 +331,7 @@ function registerAgent(data, response) {
 	}
 }
 
-function sendOutput(fileContents) {
+function sendOutput(url, isalert, fileContents) {
 	console.log('sendOutput')
 	
 	if (conf.get('id') == '-1')
@@ -317,7 +340,7 @@ function sendOutput(fileContents) {
 		return;
 	}
 	
-	var output = conf.get('profile') + "\n\n1\nURL\nPIC\nPIC2\n0:" + fileContents + "\n0:test";
+	var output = conf.get('profile') + "\n" + (isalert ? '1' : '') + "\n1\n" + url + "\nPIC\n0:" + fileContents;
 	var encoded = Buffer.from(output).toString('base64');
 	var data = { "Output": encoded };
 	restCalls.putData(username, password, data, null, pingServer, writeSettingsToJavascript);
@@ -325,7 +348,7 @@ function sendOutput(fileContents) {
 
 function parseContentsForAlert(fileContents) {
 	if (conf.get('alertenabled') != '1')
-		return;
+		return 0;
 	
 	var re = conf.get('alertregex');
 	var found = fileContents.match(new RegExp(re,'i'));
@@ -333,16 +356,21 @@ function parseContentsForAlert(fileContents) {
 	{
 		//console.log(found[1]);
 		
+		var isalert = 0;
 		var pair = splitPair(conf.get('alertrange'), '-');
 		if (found[1] > pair.b || found[1] < pair.a) {
 			console.log('out of range');
+			isalert = 1;
 			const { spawnSync } = require('child_process');
 			const py = spawnSync('python', ['groups.py', 'alert', conf.get('profile') + '=' + found[1]]);	
 		}		
 		
 		const { spawnSync } = require('child_process');
 		const py = spawnSync('python', ['groups.py', 'alertdata', found[1]]);	
+		return isalert;
 	}
+	
+	return 0;
 }
 
 function handleId(key, val) {
@@ -424,8 +452,8 @@ password = pair.b;
 optionalArgs();
 
 //TODO: remove block
-conf.set('profile','temptest');
-conf.set('profurl','file://out2.txt.lck');
+//conf.set('profile','temptest');
+//conf.set('profurl','file://out2.txt.lck');
 //
 
 if (files.directoryExists('lib')) {
@@ -462,8 +490,8 @@ try
 	if (doRead && files.fileExists(filename))
 		contents = fs.readFileSync(filename, 'utf8');
 
-	parseContentsForAlert(contents);
-	sendOutput(contents);
+	var isalert = parseContentsForAlert(contents);
+	sendOutput(url, isalert, contents);
 } 
 catch (err) 
 {
