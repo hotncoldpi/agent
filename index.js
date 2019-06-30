@@ -317,11 +317,15 @@ function registerAgent(data, response) {
 	console.log('registerAgent');
 		
 	//try to get unused id
-	if (data.length > 0 && data[0].Id != null)
+	if (data.length > 0 && (data[0].Id != null || data[0].id != null))
 	{
-		console.log('registerAgent: found id of ' + data[0].Id);
-		conf.set('id', data[0].Id);
-		handleId('id', data[0].Id);
+		var newid = data[0].Id;
+		if (newid == null)
+			newid = data[0].id;
+		
+		console.log('registerAgent: found id of ' + newid);
+		conf.set('id', newid);
+		handleId('id', newid);
 	}
 	else
 	{
