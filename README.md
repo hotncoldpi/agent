@@ -1,4 +1,4 @@
-#Temperature Agent
+# Temperature Agent
 
 This is a nodejs command-line application that gathers temperature data (in conjunction with bash and python scripts) and publishes it to a REST API.  It also:
 
