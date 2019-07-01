@@ -7,4 +7,4 @@ This is a nodejs command-line application that gathers temperature data (in conj
 - Provides remote configuration of alert parameters
 - Provides historical graphing and limited configuration via local web pages
 
-It has been successfully tested on debian and raspbian OSes.
+It has been successfully tested on Debian and Raspbian OSes.
