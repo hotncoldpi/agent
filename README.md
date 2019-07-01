@@ -1,6 +1,6 @@
 # Temperature Agent
 
-This is a nodejs command-line application that gathers temperature data (in conjunction with bash and python scripts) and publishes it to a REST API.  It also:
+This is a nodejs command-line application that gathers temperature data (in conjunction with bash and python scripts in scripts repo) and publishes it to a REST API.  It also:
 
 - Sends email-based alerts
 - Reports basic system info (IP, OS, agent version)
