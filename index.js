@@ -15,7 +15,7 @@ process.on('uncaughtException', function (err) {
   process.exit(1)
 })
 
-var version  = '0.0.1b';
+var version  = '0.0.2b';
 var username = '';
 var password = '';
 
@@ -307,6 +307,14 @@ function getDistro() {
 function pingServer(data, response) {
 	console.log('pingServer');
 	
+	if (response.responseUrl.indexOf('/login.html') != -1)
+	{
+		console.log('not logged in');
+		var data = { "httpd_username": username, "httpd_password": password };
+		restCalls.postData(username, password, data, null, 'cookie');
+		return;
+	}
+	
 	var ips = getIps();
 	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release() + ' ' + getDistro(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
 	restCalls.putData(username, password, data, {"update":"true"}, runCommandAndSendResponse, null);
@@ -316,6 +324,14 @@ function pingServer(data, response) {
 function registerAgent(data, response) {
 	console.log('registerAgent');
 		
+	if (response.responseUrl.indexOf('/login.html') != -1)
+	{
+		console.log('not logged in');
+		var data = { "httpd_username": username, "httpd_password": password };
+		restCalls.postData(username, password, data, null, 'cookie');
+		return;
+	}
+
 	//try to get unused id
 	if (data.length > 0 && (data[0].Id != null || data[0].id != null))
 	{
@@ -331,7 +347,7 @@ function registerAgent(data, response) {
 	{
 		//register new agent
 		var data = { "Name": os.hostname(), "IP": getIps(), "Version": version, "OS": os.type() + ' ' + os.release(), "Status":"", "Profile":conf.get('profile') };
-		restCalls.postData(username, password, data, null);
+		restCalls.postData(username, password, data, null, 'id', handleId);
 	}
 }
 
@@ -459,6 +475,8 @@ optionalArgs();
 //conf.set('profile','temptest');
 //conf.set('profurl','file://out2.txt.lck');
 //
+if (typeof conf.get('session-'+conf.get('server')) == 'undefined')
+	conf.set('session-'+conf.get('server'),'')
 
 if (files.directoryExists('lib')) {
 	console.log('lib exists')
