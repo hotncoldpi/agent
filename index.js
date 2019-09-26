@@ -121,6 +121,15 @@ function writeSettingsToJavascript(data, response) {
 }
 
 function runCommandAndSendResponse(data, response) {
+	runCommandAndSendResponseOpts(data, response, false);
+}
+
+function runCommandAndSendResponseEchoServer(data, response) {
+	console.log('runCommandAndSendResponseEchoServer');
+	runCommandAndSendResponseOpts(data, response, true);
+}
+
+function runCommandAndSendResponseOpts(data, response, echo) {
 	console.log('runCommandAndSendResponse');
 	
 	//parse command
@@ -132,7 +141,7 @@ function runCommandAndSendResponse(data, response) {
 	var pair = splitColonPair(cmd);
 	if (pair == null) 
 	{
-		writeSettingsToJavascript(null, null);
+		if (!echo) writeSettingsToJavascript(null, null);
 		return;
 	}
 	var cmdNum = pair.a;
@@ -166,7 +175,7 @@ function runCommandAndSendResponse(data, response) {
 
 	if (cmdNum == respNum)
 	{
-		writeSettingsToJavascript(null, null);
+		if (!echo) writeSettingsToJavascript(null, null);
 		return;
 	}
 	
@@ -192,6 +201,13 @@ function runCommandAndSendResponse(data, response) {
 		' alertrange=' + conf.get('alertrange') +
 		' alertenabled=' + conf.get('alertenabled') +
 		' uptime=' + conf.get('uptime') + ' sensor=' + contents;
+		
+		if (echo) resp += ' mainserver=' + conf.get('server');
+	}
+	else if (echo)
+	{
+		resp = 'not allowed';
+		separator = ':';
 	}
 	else if (cmd.indexOf('setTwoProperties ') == 0)
 	{
@@ -267,7 +283,7 @@ function runCommandAndSendResponse(data, response) {
 	}
 	
 	var data = { "Response": cmdNum + separator + resp };
-	restCalls.putData(username, password, null, data, null, writeSettingsToJavascript, null);
+	restCalls.putData(username, password, echo ? conf.get('echoserver') : null, data, null, echo ? null : writeSettingsToJavascript, null);
 }
 
 function getIps() {
@@ -320,12 +336,12 @@ function pingServer(data, response) {
 	restCalls.putData(username, password, null, data, {"update":"true"}, runCommandAndSendResponse, null);
 }
 
-function pingBackupServer(data, response) {
-	console.log('pingBackupServer');
+function pingEchoServer(data, response) {
+	console.log('pingEchoServer');
 	
 	var ips = getIps();
 	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release() + ' ' + getDistro(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
-	restCalls.putData(username, password, conf.get('backupserver'), data, {"update":"true"}, null, null);
+	restCalls.putData(username, password, conf.get('echoserver'), data, {"update":"true"}, runCommandAndSendResponseEchoServer, null);
 }
 
 ////////////////////////////////////////////////////
@@ -372,8 +388,8 @@ function sendOutput(url, isalert, fileContents) {
 	var encoded = Buffer.from(output).toString('base64');
 	var data = { "Output": encoded };
 	restCalls.putData(username, password, null, data, null, pingServer, writeSettingsToJavascript);
-	if (conf.get('backupserver') != '')
-		restCalls.putData(username, password, conf.get('backupserver'), data, null, pingBackupServer, null);
+	if (conf.get('echoserver') != '')
+		restCalls.putData(username, password, conf.get('echoserver'), data, null, pingEchoServer, null);
 }
 
 function parseContentsForAlert(fileContents) {
@@ -450,7 +466,7 @@ function optionalArgs() {
 conf = new Configstore('agent', 
 	{
 		server: 		'localhost', 
-		backupserver: 	'', 
+		echoserver: 	'', 
 		id: 			'-1', 
 		profile: 		'temperature', 
 		pollinginterval: '10', 
