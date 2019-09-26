@@ -15,7 +15,7 @@ process.on('uncaughtException', function (err) {
   process.exit(1)
 })
 
-var version  = '0.0.2b';
+var version  = '0.0.3b';
 var username = '';
 var password = '';
 
@@ -267,7 +267,7 @@ function runCommandAndSendResponse(data, response) {
 	}
 	
 	var data = { "Response": cmdNum + separator + resp };
-	restCalls.putData(username, password, data, null, writeSettingsToJavascript, null);
+	restCalls.putData(username, password, null, data, null, writeSettingsToJavascript, null);
 }
 
 function getIps() {
@@ -317,7 +317,15 @@ function pingServer(data, response) {
 	
 	var ips = getIps();
 	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release() + ' ' + getDistro(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
-	restCalls.putData(username, password, data, {"update":"true"}, runCommandAndSendResponse, null);
+	restCalls.putData(username, password, null, data, {"update":"true"}, runCommandAndSendResponse, null);
+}
+
+function pingBackupServer(data, response) {
+	console.log('pingBackupServer');
+	
+	var ips = getIps();
+	var data = { "IP": ips, "Version": version, "OS": os.type() + ' ' + os.release() + ' ' + getDistro(), "Percent":0, "Mode":0, "Profile":conf.get('profile') };
+	restCalls.putData(username, password, conf.get('backupserver'), data, {"update":"true"}, null, null);
 }
 
 ////////////////////////////////////////////////////
@@ -363,7 +371,9 @@ function sendOutput(url, isalert, fileContents) {
 	var output = conf.get('profile') + "\n" + (isalert ? '1' : '') + "\n1\n" + url + "\nPIC\n0:" + fileContents;
 	var encoded = Buffer.from(output).toString('base64');
 	var data = { "Output": encoded };
-	restCalls.putData(username, password, data, null, pingServer, writeSettingsToJavascript);
+	restCalls.putData(username, password, null, data, null, pingServer, writeSettingsToJavascript);
+	if (conf.get('backupserver') != '')
+		restCalls.putData(username, password, conf.get('backupserver'), data, null, pingBackupServer, null);
 }
 
 function parseContentsForAlert(fileContents) {
@@ -440,6 +450,7 @@ function optionalArgs() {
 conf = new Configstore('agent', 
 	{
 		server: 		'localhost', 
+		backupserver: 	'', 
 		id: 			'-1', 
 		profile: 		'temperature', 
 		pollinginterval: '10', 
