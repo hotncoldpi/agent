@@ -62,13 +62,18 @@ function writeAgentsToJavascript(data, response) {
 
 function writeSettingsToJavascript(data, response) {
 	console.log('writeSettingsToJavascript')
+	
+	var buildnum = '';
+	if (files.fileExists('_build.txt')) 
+		buildnum = ' (site v' + fs.readFileSync('_build.txt', 'utf8') + ')';
+		
 	var settings = "var profile = '" + conf.get('profile') + "';\n" +
 		"var alertrange = '"+conf.get('alertrange')+"';\n" +
 		"var alertenabled = '"+conf.get('alertenabled')+"';\n" +
 		"var interval = '"+conf.get('pollinginterval')+"';\n" +
 		"var uptime = '"+conf.get('uptime')+"';\n" +
 		"var testmode = '"+conf.get('testmode')+"';\n" +
-		"var version = '"+version+"';\n" +
+		"var version = '"+version + buildnum+"';\n" +
 		"";
 
 	const { spawnSync } = require('child_process');
@@ -117,7 +122,7 @@ function writeSettingsToJavascript(data, response) {
 	}	
 	
 	if (new Date().getTime() - conf.get('lastserverget') > 60000)
-		restCalls.getData(username, password, {"active":"true"}, writeAgentsToJavascript);
+		restCalls.getData(username, password, {"active":"y"}, writeAgentsToJavascript);
 }
 
 function runCommandAndSendResponse(data, response) {
@@ -197,10 +202,13 @@ function runCommandAndSendResponseOpts(data, response, echo) {
 		}
 		//console.log('base='+files.getCurrentDirectoryBase());
 		
+		var buildnum = '';
+		if (files.fileExists('_build.txt')) buildnum = fs.readFileSync('_build.txt', 'utf8');
+		
 		resp = 'pollinginterval=' + conf.get('pollinginterval') +
 		' alertrange=' + conf.get('alertrange') +
 		' alertenabled=' + conf.get('alertenabled') +
-		' uptime=' + conf.get('uptime') + ' sensor=' + contents;
+		' uptime=' + conf.get('uptime') + ' build=' + buildnum + ' sensor=' + contents;
 		
 		if (echo) resp += ' mainserver=' + conf.get('server');
 	}
